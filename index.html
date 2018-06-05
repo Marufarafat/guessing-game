@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Home</title>
+	<link rel="stylesheet" href="css/animate.css">
+	<link rel="stylesheet" href="css/bootstrap.css">
+	<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+	
+	<header id="header_wrapper">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					<div id="logo">
+						<center><a href="index.html"><h1>Guessing</h1></a></center>
+					</div>
+				</div>
+			</div>
+		</div>
+	</header>
+
+	<section id="dice_wrapper">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-10 col-md-offset-1">
+					<h2>Instruction</h2>
+					<p>It's a guessing game. Guess a number between 1 to max number that you will provide.</p>
+				</div>
+			</div>
+			<div id="roll_dice_section" class="row">
+				<div class="col-md-6 col-md-offset-3">
+					<div class="form-group">
+						<label for="max" class="form-label">Max Number: </label>
+						<input type="text" class="form-control" id="max">
+					</div>
+					<div class="form-group">
+						<button type="button" id="roll_dice" class="btn btn-primary" onclick="onClickRolldice();"> Roll Dice </button>
+						<button type="button" id="get_number" class="btn btn-primary" onclick="onClickGetNumber();"> Get Number </button>
+					</div>
+				</div>
+			</div>
+			<div id="guess_section" class="row">
+				<div class="col-md-6 col-md-offset-3">
+					<p id="head_well"></p>
+					<p id="guessing_note"></p>
+					<b id="dice_number"></b>
+					
+					<div class="guess_number_section form-group">
+						<label for="guess" class="form-label">Your guess number: </label>
+						<input type="text" class="form-control" id="guess">
+					</div>
+					
+					<div class="guess_number_section form-group">
+						<button type="button" id="take_guess" class="btn btn-primary" onclick="onClickGuess();"> Take a guess </button>
+						<a id="refresh" href="index.html" class="btn btn-primary">Refresh this page</a>
+					</div>
+					
+				</div>
+			</div>
+
+		</div>
+	</section>
+
+	<footer id="footer_wrapper" class="footer-fix">
+		<div class="container">
+			<div class="row">
+				<div class="col-md-12">
+					<center><small>Design by Arafat</small></center>
+				</div>
+			</div>
+		</div>
+	</footer>
+
+	<script src="lib/nebPay.js"></script>
+	<script src="lib/nebulas.js"></script>
+	<script src="js/jquery-1.12.0.min.js"></script>
+	<script src="js/bootstrap.min.js"></script>
+
+	<script>
+
+		$("#guess_section").hide();
+		$("#refresh").hide();
+
+	    var NebPay = require("nebpay");
+	    var nebPay = new NebPay();
+
+		var nebulas = require("nebulas");
+		var neb = new nebulas.Neb();
+		neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+
+		var number, txhash, max_num, guessToken;
+
+		guessToken = 0;
+
+	    var contract_address = "n21WKAbg4KoHwpNMkpSy1xvrqDt6TgyKjVE";
+
+	    function onClickGuess(){
+
+	    	var guess = Number(document.getElementById("guess").value);
+
+	    	if (!inputValidation(guess)) {
+	    		return false;
+	    	}
+
+	    	guessToken++;
+
+			if (guessToken >= 6) {
+				$("#dice_number").append("Nope, the number i was thinking was " + number);
+				$(".guess_number_section").hide();
+				$("#refresh").show();
+
+			}
+
+			if (guess < number) {
+				$("#guessing_note").append("Your guess is too low. <br>");
+			} else if(guess > number){
+				$("#guessing_note").append("Your guess is too high. <br>");
+			} else{
+				$("#dice_number").append("Good job, You guessed my number in " + guessToken + " guesses");		
+				$(".guess_number_section").hide();
+				$("#refresh").show();
+			}
+	    }
+
+	    function inputValidation(num){
+
+	    	if (num == 0) {
+	    		alert("Please provide a Number.");
+	    		return false;	    		
+	    	}
+
+	    	if (num < 1) {
+	    		alert("Number must have to be more then 1.");
+	    		return false;	    		
+	    	}
+
+	    	if (isNaN(num)) {
+	    		alert("Must have to be number.");
+	    		return false;
+	    	}
+
+	    	return true;
+	    }
+
+	    function onClickRolldice(){
+
+	    	max_num = Number(document.getElementById("max").value);
+
+	    	if (!inputValidation(max_num)) {
+	    		return false;
+	    	}
+
+	    	nebPay.call(contract_address, 0, "rollDice", JSON.stringify([max_num]), {
+	            listener: onRequestNumber
+	        }); 
+	        
+	    }
+
+	    function onRequestNumber(resp) {
+	        if(typeof(resp)==='string' && resp.startsWith("Error")) {
+	            throw new Error(resp);
+	        }
+	        txhash = resp.txhash;
+	        // var href = window.location.href;
+	        // var dir = href.substring(0, href.lastIndexOf('/')) + "/";
+	        // window.location = dir + 'index.html?tx=' + resp.txhash; 
+	        // document.getElementById("roll_dice").disabled = true;
+	    }
+
+
+		function onClickGetNumber(){
+
+			// txhash = window.location.search.substr(4);
+
+			if (txhash == "") {
+				return null;
+			}
+
+			var number = result(txhash);
+			console.log("txhash: " + txhash);
+			console.log("Number: " + number);
+		}
+
+
+	    function result(txhash) {
+
+	    	if (!number) {
+		        neb.api.call({
+		            from: contract_address, 
+		            to: contract_address,
+		            value: 0,
+		            nonce: 0, 
+		            gasPrice: 1000000,
+		            gasLimit: 200000,
+		            contract: {function: "getNumber", args: JSON.stringify([txhash])} //?tx=
+		        }).then(function (resp) {
+		            var response = JSON.parse(resp.result);
+		            if (response) {
+		            	console.log("Date: " + new Date(response.date));
+		            	console.log("Number: " + response.number);
+		            	number = response.number
+
+		            } else{
+		            	return null;
+		            }
+		        });  
+	    	} else{
+				$("#roll_dice_section").hide();
+				$("#guess_section").show();
+				$("#head_well").text("Well, I am thinking of a number between 1 to " + max_num);
+	    		return number;
+	    	}
+      
+	    }	
+	</script>
+</body>
+</html>
