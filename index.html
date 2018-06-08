@@ -83,18 +83,30 @@
 		$("#guess_section").hide();
 		$("#refresh").hide();
 
+		// for nebpay
 	    var NebPay = require("nebpay");
 	    var nebPay = new NebPay();
 
-		var nebulas = require("nebulas");
-		var neb = new nebulas.Neb();
-		neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+	    // for nebulas
+	    var nebulas = require("nebulas"),
+	        Account = nebulas.Account,
+	        neb = new nebulas.Neb();
 
 		var number, txhash, max_num, guessToken;
-
+		var is_mainnet = false;
 		guessToken = 0;
 
-	    var contract_address = "n21WKAbg4KoHwpNMkpSy1xvrqDt6TgyKjVE";
+		if (is_mainnet) {
+			neb.setRequest(new nebulas.HttpRequest("https://mainnet.nebulas.io"));
+		    var contract_address = "n1j4jZFuW3pKreDaDTtdVA5y4zVehGSCfzR";
+		    var callbackUrl = NebPay.config.mainnetUrl;   //
+
+		} else{
+			neb.setRequest(new nebulas.HttpRequest("https://testnet.nebulas.io"));
+		    var contract_address = "n21WKAbg4KoHwpNMkpSy1xvrqDt6TgyKjVE";
+		    var callbackUrl = NebPay.config.testnetUrl;   //
+
+		}
 
 	    function onClickGuess(){
 
@@ -153,9 +165,9 @@
 	    	}
 
 	    	nebPay.call(contract_address, 0, "rollDice", JSON.stringify([max_num]), {
-	            listener: onRequestNumber
+	            listener: onRequestNumber,
+            	callback: callbackUrl
 	        }); 
-	        
 	    }
 
 	    function onRequestNumber(resp) {
@@ -163,24 +175,17 @@
 	            throw new Error(resp);
 	        }
 	        txhash = resp.txhash;
-	        // var href = window.location.href;
-	        // var dir = href.substring(0, href.lastIndexOf('/')) + "/";
-	        // window.location = dir + 'index.html?tx=' + resp.txhash; 
-	        // document.getElementById("roll_dice").disabled = true;
 	    }
 
 
 		function onClickGetNumber(){
 
-			// txhash = window.location.search.substr(4);
 
 			if (txhash == "") {
 				return null;
 			}
 
 			var number = result(txhash);
-			console.log("txhash: " + txhash);
-			console.log("Number: " + number);
 		}
 
 
